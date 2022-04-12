@@ -44,6 +44,31 @@ Script should now run daily at 12pm central time.
 *NOTE:* After running the first time there will be a stored value that will prevent events from being populated unless edited after this date/time.
 If you need to override this set lastRun to null after initalized.
 
+---
+
+### Script Test Runs
+
+When testing set the function to run to synchEmail or synch if using the group script rather than setupEmail / setupGroup, It will skip setting up the daily trigger for running.
+
+<img width="372" alt="image" src="https://user-images.githubusercontent.com/91081928/163019975-8dab7131-0ba8-4fab-83b7-5a8e0422ba32.png">
+
+Also when doing testing comment out line 132 in the Email script or 122 in the Group script.
+Below should be the code on that line.
+
+```
+params.updatedMin = formatDateAsRFC3339(optSince);
+```
+This will allow repeated runs of the scrpit to poll all events in the MONTHS_IN_ADVANCED window.
+
+```
+//params.updatedMin = formatDateAsRFC3339(optSince);
+```
+^^^This is what it should look like for testing
+
+Reset this back to the uncommented version before leaving this to run on trigger as it will poll all events rather than just ones updated, causing the script to run longer and possibly time out with large groups/teams.
+
+
+
 ## Confluence Embedding
 
 ### Google Calendar

@@ -68,7 +68,7 @@ function syncEmail() {
   // Determines the time the the script was last run.
   let lastRun = PropertiesService.getScriptProperties().getProperty('lastRun');
   lastRun = lastRun ? new Date(lastRun) : null;
-  if(TESTING_MODE){
+  if(TESTING_MODE || FULL_RESET){
     lastRun = null;
   }
 

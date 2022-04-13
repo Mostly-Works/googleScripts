@@ -39,7 +39,7 @@ function setupEmail() {
   if (triggers.length > 0) {
     throw new Error('Triggers are already setup.');
   }
-  ScriptApp.newTrigger('sync').timeBased().everyDays(1).atHour(12).inTimezone("America/Chicago").create();
+  ScriptApp.newTrigger('syncEmail').timeBased().everyDays(1).atHour(12).inTimezone("America/Chicago").create();
   // Runs the first sync immediately.
   syncEmail();
 }
@@ -139,12 +139,12 @@ function findEventsEmail(email, keyword, start, end, optSince) {
     try {
       response = Calendar.Events.list(email, params);
     } catch (e) {
-      console.error('Error retriving events for %s, %s: %s; skipping',
+      console.error('Error retrieving events for %s, %s: %s; skipping',
           email, keyword, e.toString());
       continue;
     }
     events = events.concat(response.items.filter(function(item) {
-      return shoudImportEventEmail(email, keyword, item);
+      return shouldImportEventEmail(email, keyword, item);
     }));
     pageToken = response.nextPageToken;
   } while (pageToken);
@@ -159,7 +159,7 @@ function findEventsEmail(email, keyword, start, end, optSince) {
  * @param {Calendar.Event} event The event being considered.
  * @return {boolean} True if the event should be imported.
  */
-function shoudImportEventEmail(email, keyword, event) {
+function shouldImportEventEmail(email, keyword, event) {
   // Filters out events where the keyword did not appear in the summary
   // (that is, the keyword appeared in a different field, and are thus
   // is not likely to be relevant).
@@ -179,7 +179,7 @@ function shoudImportEventEmail(email, keyword, event) {
 }
 
 /**
- * Returns an RFC3339 formated date String corresponding to the given
+ * Returns an RFC3339 formatted date String corresponding to the given
  * Date object.
  * @param {Date} date a Date.
  * @return {string} a formatted date string.

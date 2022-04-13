@@ -25,10 +25,14 @@ let WIDEN_GROUP = 'widen-employees@acquia.com'
 let EMAIL = ["tyler.firkus@acquia.com", 'ronald.shaw@acquia.com',"test@test.com"]
 // Keywords to query for in events
 let KEYWORDS = ['vacation', 'ooo', 'out of office', 'offline', 'pto', 'out', 'busy', 'gone', 'mia'];
+//Blacklist for events to NOT add that might match on above events.
+let BLACKLIST = ['vacation reminder'];
 let MONTHS_IN_ADVANCE = 3;
 // Set the ID of the team calendar to add events to. You can find the calendar's
 // ID on the settings page.
+//Enables re-fetching of events if they are outside of the last run window as well as disabling deleted event selection
 let TESTING_MODE = false;
+//removed all events from TEAM_CALENDAR_ID calendar and re-populates with today + MONTHS_IN_ADVANCE
 let FULL_RESET = false;
 
 

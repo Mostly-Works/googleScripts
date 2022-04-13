@@ -28,6 +28,8 @@ let KEYWORDS = ['vacation', 'ooo', 'out of office', 'offline', 'pto', 'out', 'bu
 let MONTHS_IN_ADVANCE = 3;
 // Set the ID of the team calendar to add events to. You can find the calendar's
 // ID on the settings page.
+let TESTING_MODE = false;
+let FULL_RESET = false;
 
 
 /**
@@ -39,7 +41,7 @@ function setupEmail() {
   if (triggers.length > 0) {
     throw new Error('Triggers are already setup.');
   }
-  ScriptApp.newTrigger('syncEmail').timeBased().everyDays(1).atHour(12).inTimezone("America/Chicago").create();
+  ScriptApp.newTrigger('sync').timeBased().everyDays(1).atHour(12).inTimezone("America/Chicago").create();
   // Runs the first sync immediately.
   syncEmail();
 }
@@ -54,9 +56,17 @@ function syncEmail() {
   let maxDate = new Date();
   maxDate.setMonth(maxDate.getMonth() + MONTHS_IN_ADVANCE);
 
+  if(FULL_RESET){
+    deleteAllEvents(TEAM_CALENDAR_ID);
+  }
+
+
   // Determines the time the the script was last run.
   let lastRun = PropertiesService.getScriptProperties().getProperty('lastRun');
   lastRun = lastRun ? new Date(lastRun) : null;
+  if(TESTING_MODE){
+    lastRun = null;
+  }
 
   // For each user, finds events having one or more of the keywords in the event
   // summary in the specified date range. Imports each of those to the team
@@ -123,32 +133,15 @@ function findEventsEmail(email, keyword, start, end, optSince) {
     q: keyword,
     timeMin: formatDateAsRFC3339(start),
     timeMax: formatDateAsRFC3339(end),
-    showDeleted: true,
+    showDeleted: optSince?true:false,
   };
-  if (optSince) {
+  if (optSince && !FULL_RESET) {
     // This prevents the script from examining events that have not been
     // modified since the specified date (that is, the last time the
     // script was run).
     params.updatedMin = formatDateAsRFC3339(optSince);
   }
-  let pageToken = null;
-  let events = [];
-  do {
-    params.pageToken = pageToken;
-    let response;
-    try {
-      response = Calendar.Events.list(email, params);
-    } catch (e) {
-      console.error('Error retrieving events for %s, %s: %s; skipping',
-          email, keyword, e.toString());
-      continue;
-    }
-    events = events.concat(response.items.filter(function(item) {
-      return shouldImportEventEmail(email, keyword, item);
-    }));
-    pageToken = response.nextPageToken;
-  } while (pageToken);
-  return events;
+  return getEventsList(email,params, keyword);
 }
 
 /**
@@ -159,13 +152,18 @@ function findEventsEmail(email, keyword, start, end, optSince) {
  * @param {Calendar.Event} event The event being considered.
  * @return {boolean} True if the event should be imported.
  */
-function shouldImportEventEmail(email, keyword, event) {
+function shoudImportEventEmail(email, keyword, event) {
   // Filters out events where the keyword did not appear in the summary
   // (that is, the keyword appeared in a different field, and are thus
   // is not likely to be relevant).
   if (event.summary.toLowerCase().indexOf(keyword) < 0) {
     return false;
   }
+  BLACKLIST.forEach(word =>{
+    if(event.summary.toLowerCase().indexOf(keyword) < 0){
+      return false;
+    }
+  })
   if (!event.organizer || event.organizer.email == email) {
     // If the user is the creator of the event, always imports it.
     return true;
@@ -179,7 +177,7 @@ function shouldImportEventEmail(email, keyword, event) {
 }
 
 /**
- * Returns an RFC3339 formatted date String corresponding to the given
+ * Returns an RFC3339 formated date String corresponding to the given
  * Date object.
  * @param {Date} date a Date.
  * @return {string} a formatted date string.
@@ -187,3 +185,45 @@ function shouldImportEventEmail(email, keyword, event) {
 function formatDateAsRFC3339(date) {
   return Utilities.formatDate(date, 'UTC', 'yyyy-MM-dd\'T\'HH:mm:ssZ');
 }
+
+function deleteAllEvents(calendarId){
+  let params = {}
+  let events = getEventsList(calendarId, params, "CLEAR");
+  let count = 0;
+  events.forEach(value =>{
+    try{
+    Calendar.Events.remove(calendarId,value.id);
+    count ++;
+    }catch(e){
+      console.log('Error deleteing Event: %s', value.summary)
+    }
+  })
+  console.log("Deleted %s Events", count);
+}
+
+function getEventsList(email, params, keyword){
+  let pageToken = null;
+  let events = [];
+  do {
+    params.pageToken = pageToken;
+    let response;
+    try {
+      response = Calendar.Events.list(email, params);
+    } catch (e) {
+      console.error('Error retriving events for %s, %s: %s; skipping',
+          email, keyword, e.toString());
+      continue;
+    }
+    events = events.concat(response.items.filter(function(item) {
+      if(FULL_RESET && keyword === "CLEAR"){
+        return true;
+      }
+      return shoudImportEventEmail(email, keyword, item);
+    }));
+    pageToken = response.nextPageToken;
+  } while (pageToken);
+  return events;
+}
+
+
+

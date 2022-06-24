@@ -163,11 +163,18 @@ function shoudImportEventEmail(email, keyword, event) {
   if (event.summary.toLowerCase().indexOf(keyword) < 0) {
     return false;
   }
+  
+  // Filters out events where at least one Blacklisted word/phrase 
+  // appears in the summary of the event.
+  let hasBlacklistedValue = false;
   BLACKLIST.forEach(word =>{
-    if(event.summary.toLowerCase().indexOf(keyword) < 0){
+    if(event.summary.toLowerCase().indexOf(word) < 0){
       return false;
     }
+    hasBlacklistedValue = true;
   })
+  if (hasBlacklistedValue) return false;
+    
   if (!event.organizer || event.organizer.email == email) {
     // If the user is the creator of the event, always imports it.
     return true;
